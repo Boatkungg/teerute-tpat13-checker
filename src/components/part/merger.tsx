@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheetIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { DownloadIcon, FileSpreadsheetIcon, PlusIcon, TrashIcon } from "lucide-react";
 import {
     Empty,
     EmptyDescription,
@@ -29,8 +29,13 @@ interface FileItem {
     file: File;
 }
 
-export default function MergerPart() {
+interface MergerPartProps {
+    onMergeComplete?: () => void;
+}
+
+export default function MergerPart({ onMergeComplete }: MergerPartProps) {
     const [files, setFiles] = useState<FileItem[]>([]);
+    const [mergedData, setMergedData] = useState<Record<string, string | number>[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const sensors = useSensors(
@@ -99,6 +104,7 @@ export default function MergerPart() {
 
     const handleClearAll = () => {
         setFiles([]);
+        setMergedData([]);
     };
 
     const handleMerge = async () => {
@@ -107,7 +113,7 @@ export default function MergerPart() {
         try {
             const studentData = new Map<string, Record<string, string | number>>();
             let maxQuestionNumber = 0;
-            // TODO: Fix this hardcoded student ID column
+            // TODO: Fix this hardcoded student ID column maybe assume first column is student ID
             const allColumns: string[] = ["เลขประจำตัว"]
 
             for (const item of files) {
@@ -158,7 +164,7 @@ export default function MergerPart() {
                     }
 
                 }
-                
+
             }
             console.log(allColumns)
             console.log(studentData)
@@ -174,14 +180,26 @@ export default function MergerPart() {
 
             console.log(result)
 
-            const newSheet = XLSX.utils.json_to_sheet(result, { header: allColumns})
-            const newWorkbook = XLSX.utils.book_new()
-            XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Merged")
+            // const newSheet = XLSX.utils.json_to_sheet(result, { header: allColumns})
+            // const newWorkbook = XLSX.utils.book_new()
+            // XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Merged")
+
+            setMergedData(result);
 
             // TODO: display and share to next part
         } catch (error) {
             console.error('Error merging files:', error)
         }
+    }
+
+    const handleDownload = () => {
+        if (mergedData.length === 0) return;
+
+        const worksheet = XLSX.utils.json_to_sheet(mergedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Merged");
+
+        XLSX.writeFile(workbook, "merged-answer-sheet.csv", { bookType: "csv" });
     }
 
     return (
@@ -258,7 +276,33 @@ export default function MergerPart() {
                 )}
 
                 {/* merge result */}
-                {}
+                {mergedData.length > 0 && (
+                    <Card className=" border mt-6">
+                        <CardHeader>
+                            <CardTitle className=" text-lg">ผลลัพธ์การรวมไฟล์</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className=" w-9 h-9 flex items-center justify-center rounded bg-accent text-accent-foreground">
+                                        <FileSpreadsheetIcon className="w-4 h-4" />
+                                    </div>
+
+                                </div>
+                                <div className=" space-y-1">
+                                    <p className="text-md">merged-answer-sheet.csv</p>
+                                    <p className="text-sm text-muted-foreground">จำนวนนักเรียน: {mergedData.length} คน</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <Button className="w-full" onClick={handleDownload}>
+                                <DownloadIcon />
+                                ดาวน์โหลดไฟล์
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                )}
             </div>
         </div>
     );
