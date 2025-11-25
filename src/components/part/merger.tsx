@@ -110,15 +110,18 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
     const handleMerge = async () => {
         if (files.length === 0) return;
 
+        const studentIdColumn = "เลขประจำตัว";
+
         try {
             const studentData = new Map<string, Record<string, string | number>>();
             let maxQuestionNumber = 0;
             // TODO: Fix this hardcoded student ID column maybe assume first column is student ID
-            const allColumns: string[] = ["เลขประจำตัว"]
+            const allColumns: string[] = [studentIdColumn]
 
             for (const item of files) {
                 const arrayBuffer = await item.file.arrayBuffer();
                 // TODO: Fix "Codepage tables are not loaded.  Non-ASCII characters may not give expected results"
+                // Codepage 65001 is needed for UTF-8
                 const workbook = XLSX.read(arrayBuffer, { type: "array", codepage: 65001 });
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const data = XLSX.utils.sheet_to_json<Record<string, string | number>>(sheet);
@@ -127,7 +130,7 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
                 if (data.length === 0) continue;
 
                 // TODO: Fix this hardcoded student ID column
-                const columns = Object.keys(data[0]).filter(col => col !== "เลขประจำตัว")
+                const columns = Object.keys(data[0]).filter(col => col !== studentIdColumn)
                 console.log(columns)
 
                 const offset = maxQuestionNumber;
@@ -152,9 +155,9 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
 
                 // TODO: Fix this hardcoded student ID column
                 for (const row of data) {
-                    const id = row["เลขประจำตัว"]
+                    const id = row[studentIdColumn]
                     if (!studentData.has(id.toString())) {
-                        studentData.set(id.toString(), { ["เลขประจำตัว"]: id })
+                        studentData.set(id.toString(), { [studentIdColumn]: id })
                     }
 
                     const existingStudent = studentData.get(id.toString())!
