@@ -22,6 +22,7 @@ import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, MouseSensor, T
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SortableFileItem from "../sortable-file-item";
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import * as XLSX from "xlsx";
 
 interface FileItem {
     id: string;
@@ -100,23 +101,111 @@ export default function MergerPart() {
         setFiles([]);
     };
 
-    const handleMerge = () => {
-        // Implement merge functionality here
+    const handleMerge = async () => {
+        if (files.length === 0) return;
+
+        try {
+            const studentData = new Map<string, Record<string, string | number>>();
+            let maxQuestionNumber = 0;
+            // TODO: Fix this hardcoded student ID column
+            const allColumns: string[] = ["เลขประจำตัว"]
+
+            for (const item of files) {
+                const arrayBuffer = await item.file.arrayBuffer();
+                // TODO: Fix "Codepage tables are not loaded.  Non-ASCII characters may not give expected results"
+                const workbook = XLSX.read(arrayBuffer, { type: "array", codepage: 65001 });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json<Record<string, string | number>>(sheet);
+                console.log(data)
+
+                if (data.length === 0) continue;
+
+                // TODO: Fix this hardcoded student ID column
+                const columns = Object.keys(data[0]).filter(col => col !== "เลขประจำตัว")
+                console.log(columns)
+
+                const offset = maxQuestionNumber;
+
+                const columnMapping: Record<string, string> = {}
+                for (const col of columns) {
+                    // Find the question number and answer number
+                    const match = col.match(/^(\d+)\.(\d+)$/);
+                    if (match) {
+                        const questionNumber = parseInt(match[1]) + offset
+                        const answerNumber = match[2]
+                        const newColumnName = `${questionNumber}.${answerNumber}`
+                        columnMapping[col] = newColumnName
+                        allColumns.push(newColumnName)
+
+                        maxQuestionNumber = Math.max(maxQuestionNumber, questionNumber)
+                    } else {
+                        columnMapping[col] = col
+                        allColumns.push(col)
+                    }
+                }
+
+                // TODO: Fix this hardcoded student ID column
+                for (const row of data) {
+                    const id = row["เลขประจำตัว"]
+                    if (!studentData.has(id.toString())) {
+                        studentData.set(id.toString(), { ["เลขประจำตัว"]: id })
+                    }
+
+                    const existingStudent = studentData.get(id.toString())!
+                    for (const col of columns) {
+                        const newColumnName = columnMapping[col]
+                        existingStudent[newColumnName] = row[col]
+                    }
+
+                }
+                
+            }
+            console.log(allColumns)
+            console.log(studentData)
+
+            const result: Record<string, string | number>[] = []
+            for (const student of studentData.values()) {
+                const orderedData: Record<string, string | number> = {}
+                for (const col of allColumns) {
+                    orderedData[col] = student[col] ?? ""
+                }
+                result.push(orderedData)
+            }
+
+            console.log(result)
+
+            const newSheet = XLSX.utils.json_to_sheet(result, { header: allColumns})
+            const newWorkbook = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Merged")
+
+            // TODO: display and share to next part
+        } catch (error) {
+            console.error('Error merging files:', error)
+        }
     }
 
     return (
         <div className="container max-w-xl flex flex-col mx-auto mt-12">
             <div className="mx-6">
                 <h1 className=" text-2xl font-semibold mb-6">Merger</h1>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileInput}
+                    className="hidden"
+                />
+
+                {/* drag and drop */}
                 {files.length === 0 ? (
                     <div
                         onClick={handleClick}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        className={`cursor-pointer transition-colors ${
-                            isDragging ? "opacity-70" : ""
-                        }`}
+                        className={`cursor-pointer transition-colors ${isDragging ? "opacity-70" : ""
+                            }`}
                     >
                         <Empty className="border border-dashed">
                             <EmptyHeader>
@@ -131,14 +220,7 @@ export default function MergerPart() {
                                 </EmptyDescription>
                             </EmptyHeader>
                         </Empty>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            multiple
-                            accept=".xlsx,.xls,.csv"
-                            onChange={handleFileInput}
-                            className="hidden"
-                        />
+
                     </div>
                 ) : (
                     <Card className="border">
@@ -147,7 +229,7 @@ export default function MergerPart() {
                                 จัดเรียงลำดับไฟล์
                             </CardTitle>
                             <CardAction className="flex gap-2">
-                                <Button variant="outline" size="icon">
+                                <Button variant="outline" size="icon" onClick={handleClick}>
                                     <PlusIcon />
                                 </Button>
                                 <Button variant="destructive" size="icon" onClick={handleClearAll}>
@@ -170,10 +252,13 @@ export default function MergerPart() {
                             </DndContext>
                         </CardContent>
                         <CardFooter>
-                            <Button className="w-full">รวมไฟล์</Button>
+                            <Button className="w-full" onClick={handleMerge}>รวมไฟล์</Button>
                         </CardFooter>
                     </Card>
                 )}
+
+                {/* merge result */}
+                {}
             </div>
         </div>
     );
