@@ -1,6 +1,6 @@
 "use client";
 
-import { DownloadIcon, FileSpreadsheetIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { DownloadIcon, FileSpreadsheetIcon, FileStackIcon, PlusIcon, TrashIcon } from "lucide-react";
 import {
     Empty,
     EmptyDescription,
@@ -22,7 +22,10 @@ import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, MouseSensor, T
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SortableFileItem from "../sortable-file-item";
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import * as XLSX from "xlsx";
+import * as XLSX from "@e965/xlsx";
+import { set_cptable } from "@e965/xlsx";
+import * as cptable from "@e965/xlsx/dist/cpexcel.full.mjs";
+set_cptable(cptable);
 
 interface FileItem {
     id: string;
@@ -30,7 +33,7 @@ interface FileItem {
 }
 
 interface MergerPartProps {
-    onMergeComplete?: () => void;
+    onMergeComplete?: (data: Record<string, string | number>[]) => void;
 }
 
 export default function MergerPart({ onMergeComplete }: MergerPartProps) {
@@ -188,6 +191,7 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
             // XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Merged")
 
             setMergedData(result);
+            onMergeComplete?.(result);
 
             // TODO: display and share to next part
         } catch (error) {
@@ -231,7 +235,7 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
                         <Empty className="border border-dashed">
                             <EmptyHeader>
                                 <EmptyMedia variant="icon">
-                                    <FileSpreadsheetIcon />
+                                    <FileStackIcon />
                                 </EmptyMedia>
                                 <EmptyTitle>
                                     ยังไม่ได้อัปโหลดไฟล์กระดาษคำตอบ
@@ -293,8 +297,8 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
 
                                 </div>
                                 <div className=" space-y-1">
-                                    <p className="text-md">merged-answer-sheet.csv</p>
-                                    <p className="text-sm text-muted-foreground">จำนวนนักเรียน: {mergedData.length} คน</p>
+                                    <p className="text-md font-medium">merged-answer-sheet.csv</p>
+                                    <p className="text-sm text-muted-foreground">จำนวนนักเรียน: <span className="font-medium text-foreground">{mergedData.length}</span> คน</p>
                                 </div>
                             </div>
                         </CardContent>
