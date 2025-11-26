@@ -20,7 +20,7 @@ interface UploadBoxProps {
     title: string;
     description: string;
     accept?: string;
-    onDataParsed: (data: Record<string | number, string | number| null>[]) => void;
+    onDataParsed: (data: Record<string | number, string | number>[]) => void;
     children?: React.ReactNode;
     className?: string;
 }
@@ -42,7 +42,7 @@ export function UploadBox({
             const arrayBuffer = await file.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: "array", codepage: 65001 });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json<Record<string, string | number| null>>(sheet);
+            const data = XLSX.utils.sheet_to_json<Record<string, string | number>>(sheet);
             console.log("Parsed data:", data);
             onDataParsed(data);
         } catch (error) {

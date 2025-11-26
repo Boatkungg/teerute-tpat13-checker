@@ -25,10 +25,10 @@ interface CheckerPartProps {
 
 export default function CheckerPart({ studentData = [] }: CheckerPartProps) {
     const [dataToCheck, setDataToCheck] = useState<
-        Record<string, string | number | null>[]
+        Record<string, string | number>[]
     >([]);
-    const [answer, setAnswer] = useState<
-        Record<string, string | number | null>[]
+    const [trueAnswer, setTrueAnswer] = useState<
+        Record<string, string | number>[]
     >([]);
 
     const handleImportFromMerger = () => {
@@ -37,13 +37,45 @@ export default function CheckerPart({ studentData = [] }: CheckerPartProps) {
     };
 
     useEffect(() => {
-        if (answer.length > 0) {
-            console.log(answer[0][1])
+        if (trueAnswer.length > 0) {
+            console.log(trueAnswer)
         }
-    }, [answer])
+    }, [trueAnswer])
 
     const handleCheckAnswers = () => {
-        
+        if (dataToCheck.length === 0 || trueAnswer.length === 0) return;
+
+        const answerMap = trueAnswer.reduce<Record<string, string[]>>((acc, item) => {
+            const questionNumber = item["ข้อที่"]?.toString();
+            if (!questionNumber) return acc;
+
+            const answers = Object.keys(item)
+                .filter((key) => key !== "ข้อที่")
+                .map((key) => item[key].toString());
+                
+            acc[questionNumber] = answers;
+            return acc;
+        }, {})
+
+        // const answerMap: Record<string, Array<string>> = {};
+        // // e.g. {1: '30E', ข้อที่: 1}
+
+        // trueAnswer.forEach((item) => {
+        //     const questionNumber = item["ข้อที่"]?.toString() || "";
+
+        //     if (!questionNumber) return;
+
+        //     const answersCol = Object.keys(item).filter((key) => key !== "ข้อที่");
+        //     const answers: string[] = [];
+
+        //     answersCol.forEach((col) => {
+        //         answers.push(item[col].toString());
+        //     })
+
+        //     answerMap[questionNumber] = answers;
+        // })
+
+        console.log("Answer Map:", answerMap);
     };
 
     return (
@@ -94,12 +126,12 @@ export default function CheckerPart({ studentData = [] }: CheckerPartProps) {
                             </CardFooter>
                         </Card>
                     )}
-                    {answer.length === 0 ? (
+                    {trueAnswer.length === 0 ? (
                         <UploadBox
                             icon={<FilePenIcon />}
-                            title="ยังไม่ได้อัปโหลดไฟล์เฉลย"
+                            title="ยังไม่ได้อัปโหลดไฟล์เฉลยคำตอบ"
                             description="กรุณาอัปโหลดไฟล์โดยการกดหรือวางไฟล์ลงในพื้นที่นี้"
-                            onDataParsed={setAnswer}
+                            onDataParsed={setTrueAnswer}
                         >
                             <Button>
                                 <DownloadIcon />
@@ -116,14 +148,14 @@ export default function CheckerPart({ studentData = [] }: CheckerPartProps) {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    จำนวนข้อ: <span className="font-medium text-foreground">{answer.length}</span> ข้อ
+                                    จำนวนข้อ: <span className="font-medium text-foreground">{trueAnswer.length}</span> ข้อ
                                 </p>
                             </CardContent>
                             <CardFooter>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setAnswer([])}
+                                    onClick={() => setTrueAnswer([])}
                                 >
                                     ล้างข้อมูล
                                 </Button>
@@ -131,7 +163,7 @@ export default function CheckerPart({ studentData = [] }: CheckerPartProps) {
                         </Card>
                     )}
                 </div>
-                {(dataToCheck.length > 0 && answer.length > 0) && (
+                {(dataToCheck.length > 0 && trueAnswer.length > 0) && (
                     <Button className="mt-6 w-full" onClick={handleCheckAnswers}>
                         <ListChecksIcon />
                         ตรวจคำตอบ
