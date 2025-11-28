@@ -169,10 +169,16 @@ export default function MergerPart({ onMergeComplete }: MergerPartProps) {
 
                 if (data.length === 0) continue;
 
-                // TODO: Fix this hardcoded student ID column
-                const columns = Object.keys(data[0]).filter(
-                    (col) => col !== studentIdColumn
-                );
+                // Collect all unique columns from all students in this file
+                const columnsSet = new Set<string>();
+                for (const row of data) {
+                    Object.keys(row).forEach((col) => {
+                        if (col !== studentIdColumn) {
+                            columnsSet.add(col);
+                        }
+                    });
+                }
+                const columns = Array.from(columnsSet);
                 console.log(columns);
 
                 const offset = maxQuestionNumber;
