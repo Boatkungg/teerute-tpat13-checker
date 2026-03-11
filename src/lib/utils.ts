@@ -6,10 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function parseAnswerCode(answerCode: string) {
-  // input examples: "1&11&21", "10&20&30", "5&15&25"
+  // input examples: "(1-11-21)", "(10-20-30)", "(5-15-25)"
   // output: "00A", "99J", "44E"
 
-  const answers = answerCode.split("&")
+  const answers = answerCode.replace(/\(|\)/gm, "").split("-")
   let result = ""
 
   if (answers.length !== 3) return result;
